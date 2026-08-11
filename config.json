@@ -1,0 +1,50 @@
+{
+  "excel_maestro": "TechnoStore.xlsx",
+  "proveedores": {
+    "ADRICELL": {
+      "pestanas": ["LISTA MODULO ADRICELL", "BATERIAS ADRICELL", "COMPONENTES ADRICELL"],
+      "moneda_original": "ARS",
+      "palabras_clave": ["ADRICELL", "ADRI CELL", "ADRI-CELL"]
+    },
+    "PGVJ": {
+      "pestanas": [
+        "PGVJ - MODULOS GOSTTER",
+        "PGVJ - MODULOS ORIGINALES",
+        "PGVJ - REPUESTOS APPLE",
+        "PGVJ - PLACAS DE CARGA",
+        "PGVJ - BATERIAS",
+        "PGVJ - TAPAS",
+        "PGVJ - PLACAS MAIN",
+        "PGVJ - PARTES VARIAS",
+        "PGVJ - ACCESORIOS"
+      ],
+      "moneda_original": "ARS",
+      "palabras_clave": ["PGVJ", "PGVJ IMPORTACIONES"]
+    },
+    "PINAAPPLE": {
+      "pestanas": ["PIÑAAPPLE"],
+      "moneda_original": "USD",
+      "palabras_clave": ["PIÑAAPPLE", "PINAAPPLE", "PIÑA APPLE"]
+    }
+  },
+  "margenes": {
+    "general": 0.30,
+    "productos_baratos": 0.40,
+    "umbral_producto_barato_ars": 30000,
+    "producto_nuevo": 0.30
+  },
+  "ai": {
+    "provider": "openai",
+    "api_key": "TU_API_KEY_AQUI",
+    "api_base": "https://api.openai.com/v1",
+    "model": "gpt-4o",
+    "max_tokens": 4000,
+    "temperature": 0
+  },
+  "ingesta": {
+    "carpeta_entrada": "proveedores",
+    "formatos_soportados": [".xlsx", ".xls", ".pdf", ".png", ".jpg", ".jpeg", ".txt"]
+  },
+  "clave_separator": "_",
+  "stock_default": null
+}

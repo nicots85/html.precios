@@ -1,0 +1,831 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TechnoStore - Lista de Precios</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --primary: #0b1220;
+            --primary-2: #142033;
+            --accent: #2f7dfa;
+            --accent-2: #17c964;
+            --dark: #101418;
+            --gray: #5f6368;
+            --light-gray: #e8eaed;
+            --bg: #f5f6f8;
+            --card-bg: #ffffff;
+            --shadow: 0 2px 10px rgba(0,0,0,0.08);
+            --shadow-hover: 0 4px 20px rgba(0,0,0,0.12);
+            --radius: 12px;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            color: var(--dark);
+            min-height: 100vh;
+        }
+
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-2) 100%);
+            color: white;
+            padding: 1rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        }
+
+        .header-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .logo i { font-size: 2rem; color: var(--accent); }
+        .logo h1 { font-size: 1.5rem; font-weight: 700; }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .exchange-rate {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.15);
+            padding: 0.5rem 0.9rem;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .exchange-rate:hover { background: rgba(255,255,255,0.18); }
+
+        .exchange-rate .rate { font-weight: 700; font-size: 1rem; color: var(--accent-2); }
+        .exchange-rate .loading { animation: pulse 1.5s infinite; }
+        .exchange-rate .src { font-size: 0.7rem; opacity: 0.65; }
+        .exchange-rate.stale .rate { color: #f5a623; }
+        .exchange-rate.error .rate { color: #ff5c5c; }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .margin-box {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.15);
+            padding: 0.5rem 0.9rem;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.85rem;
+        }
+
+        .margin-box input {
+            width: 52px;
+            background: transparent;
+            border: none;
+            border-bottom: 1px solid rgba(255,255,255,0.4);
+            color: white;
+            font-weight: 700;
+            font-size: 0.95rem;
+            text-align: center;
+        }
+        .margin-box input:focus { outline: none; border-color: var(--accent-2); }
+
+        .toggle-costo {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            font-size: 0.8rem;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        /* Settings popover */
+        .rate-popover {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            margin-top: 0.5rem;
+            background: white;
+            color: var(--dark);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-hover);
+            padding: 1rem;
+            width: 260px;
+            display: none;
+            z-index: 300;
+        }
+        .rate-popover.open { display: block; }
+        .rate-popover h4 { font-size: 0.85rem; margin-bottom: 0.5rem; color: var(--gray); }
+        .rate-popover .manual-row { display: flex; gap: 0.5rem; margin-top: 0.5rem; }
+        .rate-popover input[type="number"] {
+            flex: 1;
+            padding: 0.5rem;
+            border: 1px solid var(--light-gray);
+            border-radius: 6px;
+            font-size: 0.9rem;
+        }
+        .rate-popover button {
+            background: var(--accent);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 0.5rem 0.75rem;
+            font-size: 0.85rem;
+            cursor: pointer;
+        }
+        .rate-popover .rate-list { list-style: none; margin-top: 0.6rem; font-size: 0.8rem; color: var(--gray); }
+        .rate-popover .rate-list li { padding: 0.15rem 0; }
+        .rate-popover .updated { font-size: 0.7rem; color: var(--gray); margin-top: 0.6rem; }
+        .relative-wrap { position: relative; }
+
+        /* Main Layout */
+        .main-container {
+            display: flex;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 1.5rem;
+            gap: 1.5rem;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 280px;
+            flex-shrink: 0;
+            position: sticky;
+            top: 100px;
+            height: fit-content;
+            max-height: calc(100vh - 120px);
+            overflow-y: auto;
+        }
+
+        .search-box {
+            background: var(--card-bg);
+            border-radius: var(--radius);
+            padding: 1rem;
+            margin-bottom: 1rem;
+            box-shadow: var(--shadow);
+        }
+
+        .search-box input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 2px solid var(--light-gray);
+            border-radius: 8px;
+            font-size: 0.95rem;
+            transition: border-color 0.2s;
+        }
+
+        .search-box input:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .categories {
+            background: var(--card-bg);
+            border-radius: var(--radius);
+            padding: 0.5rem;
+            box-shadow: var(--shadow);
+        }
+
+        .category-btn {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: none;
+            background: transparent;
+            text-align: left;
+            cursor: pointer;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: var(--dark);
+            transition: all 0.2s;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .category-btn:hover { background: var(--bg); }
+        .category-btn.active { background: var(--primary); color: white; }
+
+        .category-btn .count {
+            background: var(--light-gray);
+            padding: 0.2rem 0.5rem;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .category-btn.active .count { background: rgba(255,255,255,0.3); }
+
+        /* Content */
+        .content { flex: 1; min-width: 0; }
+
+        .content-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .content-header h2 { font-size: 1.5rem; font-weight: 600; }
+        .results-count { color: var(--gray); font-size: 0.9rem; }
+
+        /* Product Grid */
+        .product-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 1rem;
+        }
+
+        .product-card {
+            background: var(--card-bg);
+            border-radius: var(--radius);
+            padding: 1.25rem;
+            box-shadow: var(--shadow);
+            transition: all 0.2s;
+            border: 1px solid transparent;
+        }
+
+        .product-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-hover);
+            border-color: var(--accent);
+        }
+
+        .product-marca {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--accent);
+            text-transform: uppercase;
+            margin-bottom: 0.25rem;
+        }
+
+        .product-model {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: var(--dark);
+            margin-bottom: 0.5rem;
+            line-height: 1.3;
+        }
+
+        .product-calidad {
+            font-size: 0.75rem;
+            color: var(--gray);
+            background: var(--bg);
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            display: inline-block;
+            margin-bottom: 0.75rem;
+        }
+
+        .product-price {
+            padding-top: 0.75rem;
+            border-top: 1px solid var(--light-gray);
+            text-align: center;
+        }
+
+        .price-venta {
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: var(--primary-2);
+        }
+
+        .price-label {
+            font-size: 0.7rem;
+            color: var(--gray);
+            text-transform: uppercase;
+        }
+
+        .price-costo {
+            font-size: 0.75rem;
+            color: var(--gray);
+            margin-top: 0.35rem;
+        }
+
+        /* Loading */
+        .loading-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 4rem;
+            gap: 1rem;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid var(--light-gray);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* No results */
+        .no-results {
+            text-align: center;
+            padding: 4rem;
+            color: var(--gray);
+        }
+
+        .no-results i { font-size: 3rem; margin-bottom: 1rem; opacity: 0.5; }
+
+        /* Mobile */
+        .mobile-menu-btn {
+            display: none;
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+
+        @media (max-width: 768px) {
+            .mobile-menu-btn { display: block; }
+
+            .sidebar {
+                position: fixed;
+                left: -300px;
+                top: 0;
+                height: 100vh;
+                z-index: 200;
+                background: var(--card-bg);
+                transition: left 0.3s;
+                padding: 1rem;
+                box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+            }
+
+            .sidebar.open { left: 0; }
+            .main-container { flex-direction: column; padding: 1rem; }
+            .product-grid { grid-template-columns: 1fr; }
+            .header-content { flex-direction: column; align-items: flex-start; }
+            .rate-popover { right: auto; left: 0; }
+        }
+
+        .overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 150;
+        }
+
+        .overlay.active { display: block; }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="header-content">
+            <div class="logo">
+                <i class="fas fa-microchip"></i>
+                <h1>TechnoStore</h1>
+            </div>
+            <div class="header-right">
+                <label class="toggle-costo" style="color:white;">
+                    <input type="checkbox" id="showCostoToggle" onchange="toggleShowCosto()">
+                    Mostrar costo
+                </label>
+                <div class="relative-wrap">
+                    <div class="margin-box" id="marginBox" onclick="toggleMarginPopover()" style="cursor:pointer;">
+                        <i class="fas fa-percent"></i>
+                        <span>Margen</span>
+                        <span class="rate" id="marginSummary" style="font-size:0.95rem;">30%</span>
+                        <i class="fas fa-chevron-down" style="font-size:0.7rem;"></i>
+                    </div>
+                    <div class="rate-popover" id="marginPopover">
+                        <h4>Margen general</h4>
+                        <div class="manual-row">
+                            <input type="number" id="marginInput" value="30" min="0" max="500" step="1" oninput="onMarginChange()">
+                            <span style="align-self:center;">%</span>
+                        </div>
+                        <h4 style="margin-top:0.9rem;">Margen para productos baratos</h4>
+                        <div class="manual-row">
+                            <input type="number" id="marginLowInput" value="40" min="0" max="500" step="1" oninput="onMarginChange()">
+                            <span style="align-self:center;">%</span>
+                        </div>
+                        <h4 style="margin-top:0.9rem;">Se considera "barato" si vende por menos de:</h4>
+                        <div class="manual-row">
+                            <span style="align-self:center;">$</span>
+                            <input type="number" id="thresholdInput" value="20000" min="0" step="500" oninput="onMarginChange()">
+                        </div>
+                        <div class="updated">Se calcula primero con el margen general; si da menos del umbral, se usa el margen para productos baratos en su lugar.</div>
+                    </div>
+                </div>
+                <div class="relative-wrap">
+                    <div class="exchange-rate" id="exchangeRateBox" onclick="toggleRatePopover()">
+                        <i class="fas fa-coins"></i>
+                        <span>USDT/ARS:</span>
+                        <span class="rate" id="exchangeRate"><span class="loading">Cargando...</span></span>
+                        <i class="fas fa-chevron-down" style="font-size:0.7rem;"></i>
+                    </div>
+                    <div class="rate-popover" id="ratePopover">
+                        <h4>Fuente de la cotización</h4>
+                        <div id="rateSourceLabel" style="font-size:0.85rem; font-weight:600;">-</div>
+                        <ul class="rate-list" id="rateList"></ul>
+                        <div class="updated" id="rateUpdated"></div>
+                        <h4 style="margin-top:0.75rem;">Forzar tipo de cambio manual</h4>
+                        <div class="manual-row">
+                            <input type="number" id="manualRateInput" placeholder="Ej: 1550">
+                            <button onclick="applyManualRate()">Usar</button>
+                        </div>
+                        <div class="manual-row">
+                            <button style="background:var(--gray); width:100%;" onclick="clearManualRate()">Volver a automático</button>
+                        </div>
+                        <div class="manual-row">
+                            <button style="background:var(--accent-2); width:100%;" onclick="fetchExchangeRate()">
+                                <i class="fas fa-rotate"></i> Actualizar ahora
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <button class="mobile-menu-btn" onclick="toggleSidebar()">
+                <i class="fas fa-bars"></i>
+            </button>
+        </div>
+    </header>
+
+    <div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
+
+    <div class="main-container">
+        <aside class="sidebar" id="sidebar">
+            <div class="search-box">
+                <input type="text" id="searchInput" placeholder="Buscar producto..." oninput="filterProducts()">
+            </div>
+            <div class="categories" id="categories"></div>
+        </aside>
+
+        <main class="content">
+            <div class="content-header">
+                <h2 id="currentCategory">Todos los productos</h2>
+                <span class="results-count" id="resultsCount">Cargando...</span>
+            </div>
+            <div class="product-grid" id="productGrid">
+                <div class="loading-container">
+                    <div class="spinner"></div>
+                    <p>Cargando productos...</p>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // ============================================================
+        // CONFIGURACIÓN
+        // ============================================================
+        const JSON_URL = 'productos.json';
+
+        // Tipo de cambio de emergencia, se usa solo si TODAS las fuentes fallan
+        // (por ejemplo, sin internet). Conviene actualizarlo de vez en cuando.
+        const EXCHANGE_RATE_FALLBACK = 1500;
+
+        // Cada cuánto se vuelve a consultar la cotización, en milisegundos.
+        const REFRESH_INTERVAL_MS = 60000; // 1 minuto
+
+        // Fuentes de cotización, en orden de preferencia. Si la primera falla,
+        // se intenta con la siguiente automáticamente.
+        const RATE_SOURCES = [
+            {
+                name: 'CriptoYa (Binance)',
+                url: 'https://criptoya.com/api/binance/USDT/ARS/1',
+                parse: (data) => Number(data.totalBid) || Number(data.ask)
+            },
+            {
+                name: 'Binance directo',
+                url: 'https://api.binance.com/api/v3/ticker/price?symbol=USDTARS',
+                parse: (data) => Number(data.price)
+            },
+            {
+                name: 'CriptoYa (promedio exchanges)',
+                url: 'https://criptoya.com/api/USDT/ARS/1',
+                parse: (data) => {
+                    // este endpoint devuelve varios exchanges, promediamos los bid
+                    const vals = Object.values(data)
+                        .map(v => Number(v && v.totalBid))
+                        .filter(v => !isNaN(v) && v > 0);
+                    if (!vals.length) return NaN;
+                    return vals.reduce((a, b) => a + b, 0) / vals.length;
+                }
+            }
+        ];
+
+        // ============================================================
+        // ESTADO
+        // ============================================================
+        let allProducts = [];
+        let filteredProducts = [];
+        let currentCategory = 'all';
+        let exchangeRate = EXCHANGE_RATE_FALLBACK;
+        let rateSourceName = 'valor de reserva';
+        let manualRate = loadManualRate();
+        let marginPct = loadMargin('ts_margin', 30);
+        let marginLowPct = loadMargin('ts_margin_low', 40);
+        let thresholdArs = loadMargin('ts_threshold', 20000);
+        let showCosto = loadShowCosto();
+
+        // ============================================================
+        // COTIZACIÓN USDT/ARS
+        // ============================================================
+        async function fetchExchangeRate() {
+            const box = document.getElementById('exchangeRateBox');
+            box.classList.remove('error', 'stale');
+
+            if (manualRate) {
+                exchangeRate = manualRate;
+                rateSourceName = 'manual';
+                renderRateDisplay();
+                return;
+            }
+
+            for (const source of RATE_SOURCES) {
+                try {
+                    const response = await fetch(source.url);
+                    if (!response.ok) throw new Error('HTTP ' + response.status);
+                    const data = await response.json();
+                    const value = source.parse(data);
+                    if (!value || isNaN(value) || value <= 0) throw new Error('valor inválido');
+                    exchangeRate = value;
+                    rateSourceName = source.name;
+                    renderRateDisplay();
+                    renderProducts();
+                    return;
+                } catch (error) {
+                    console.warn('Fuente de cotización falló: ' + source.name, error);
+                }
+            }
+
+            // Si todas las fuentes fallan, usamos el valor de reserva
+            box.classList.add('error');
+            exchangeRate = EXCHANGE_RATE_FALLBACK;
+            rateSourceName = 'valor de reserva (sin conexión)';
+            renderRateDisplay();
+            renderProducts();
+        }
+
+        function renderRateDisplay() {
+            document.getElementById('exchangeRate').innerHTML =
+                '$' + exchangeRate.toLocaleString('es-AR', { maximumFractionDigits: 0 });
+            document.getElementById('rateSourceLabel').textContent = 'Fuente: ' + rateSourceName;
+            document.getElementById('rateUpdated').textContent =
+                'Última actualización: ' + new Date().toLocaleTimeString('es-AR');
+
+            let listHtml = '';
+            RATE_SOURCES.forEach(s => { listHtml += '<li><i class="fas fa-circle" style="font-size:5px;"></i> ' + s.name + '</li>'; });
+            document.getElementById('rateList').innerHTML = listHtml;
+        }
+
+        function toggleRatePopover() {
+            document.getElementById('marginPopover').classList.remove('open');
+            document.getElementById('ratePopover').classList.toggle('open');
+        }
+
+        function toggleMarginPopover() {
+            document.getElementById('ratePopover').classList.remove('open');
+            document.getElementById('marginPopover').classList.toggle('open');
+        }
+
+        document.addEventListener('click', (e) => {
+            const ratePop = document.getElementById('ratePopover');
+            const rateBox = document.getElementById('exchangeRateBox');
+            if (!ratePop.contains(e.target) && !rateBox.contains(e.target)) {
+                ratePop.classList.remove('open');
+            }
+            const marginPop = document.getElementById('marginPopover');
+            const marginBox = document.getElementById('marginBox');
+            if (!marginPop.contains(e.target) && !marginBox.contains(e.target)) {
+                marginPop.classList.remove('open');
+            }
+        });
+
+        function applyManualRate() {
+            const val = Number(document.getElementById('manualRateInput').value);
+            if (!val || val <= 0) return;
+            manualRate = val;
+            localStorage.setItem('ts_manual_rate', String(val));
+            fetchExchangeRate();
+        }
+
+        function clearManualRate() {
+            manualRate = null;
+            localStorage.removeItem('ts_manual_rate');
+            document.getElementById('manualRateInput').value = '';
+            fetchExchangeRate();
+        }
+
+        function loadManualRate() {
+            const v = localStorage.getItem('ts_manual_rate');
+            return v ? Number(v) : null;
+        }
+
+        // ============================================================
+        // MARGEN DE GANANCIA
+        // ============================================================
+        function loadMargin(key, defaultValue) {
+            const v = localStorage.getItem(key);
+            return v ? Number(v) : defaultValue;
+        }
+
+        function onMarginChange() {
+            marginPct = Number(document.getElementById('marginInput').value) || 0;
+            marginLowPct = Number(document.getElementById('marginLowInput').value) || 0;
+            thresholdArs = Number(document.getElementById('thresholdInput').value) || 0;
+            localStorage.setItem('ts_margin', String(marginPct));
+            localStorage.setItem('ts_margin_low', String(marginLowPct));
+            localStorage.setItem('ts_threshold', String(thresholdArs));
+            updateMarginSummary();
+            renderProducts();
+        }
+
+        function updateMarginSummary() {
+            document.getElementById('marginSummary').textContent =
+                marginPct + '% / ' + marginLowPct + '%';
+        }
+
+        // ============================================================
+        // MOSTRAR/OCULTAR COSTO
+        // ============================================================
+        function loadShowCosto() {
+            return localStorage.getItem('ts_show_costo') === '1';
+        }
+
+        function toggleShowCosto() {
+            showCosto = document.getElementById('showCostoToggle').checked;
+            localStorage.setItem('ts_show_costo', showCosto ? '1' : '0');
+            renderProducts();
+        }
+
+        // ============================================================
+        // PRODUCTOS
+        // ============================================================
+        async function loadProducts() {
+            try {
+                const response = await fetch(JSON_URL);
+                allProducts = await response.json();
+                filteredProducts = allProducts;
+                renderCategories();
+                renderProducts();
+            } catch (error) {
+                console.error('Error loading products:', error);
+                document.getElementById('productGrid').innerHTML =
+                    '<div class="no-results"><i class="fas fa-exclamation-triangle"></i><p>Error al cargar productos.</p></div>';
+            }
+        }
+
+        function renderCategories() {
+            const categories = {};
+            allProducts.forEach(p => {
+                if (!categories[p.category]) categories[p.category] = 0;
+                categories[p.category]++;
+            });
+
+            const sortedCategories = Object.entries(categories).sort((a, b) => b[1] - a[1]);
+
+            let html =
+                '<button class="category-btn ' + (currentCategory === 'all' ? 'active' : '') + '" onclick="selectCategory(\'all\')">' +
+                    '<span><i class="fas fa-th-large"></i> Todos</span>' +
+                    '<span class="count">' + allProducts.length + '</span>' +
+                '</button>';
+
+            sortedCategories.forEach(([cat, count]) => {
+                html +=
+                    '<button class="category-btn ' + (currentCategory === cat ? 'active' : '') + '" onclick="selectCategory(\'' + cat + '\')">' +
+                        '<span>' + cat + '</span>' +
+                        '<span class="count">' + count + '</span>' +
+                    '</button>';
+            });
+
+            document.getElementById('categories').innerHTML = html;
+        }
+
+        function selectCategory(category) {
+            currentCategory = category;
+            filterProducts();
+            renderCategories();
+            if (window.innerWidth <= 768) toggleSidebar();
+        }
+
+        function filterProducts() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+
+            filteredProducts = allProducts.filter(p => {
+                const matchesCategory = currentCategory === 'all' || p.category === currentCategory;
+                const matchesSearch = !searchTerm ||
+                    (p.marca && p.marca.toLowerCase().includes(searchTerm)) ||
+                    (p.modelo && p.modelo.toLowerCase().includes(searchTerm)) ||
+                    (p.calidad && p.calidad.toLowerCase().includes(searchTerm));
+                return matchesCategory && matchesSearch;
+            });
+
+            renderProducts();
+        }
+
+        // Calcula el costo y precio de venta en pesos, en vivo, a partir del
+        // costo en dólares guardado en productos.json y la cotización actual.
+        // Regla de margen: se calcula primero con el margen general. Si ese
+        // precio queda por debajo del umbral (producto "barato"), se vuelve
+        // a calcular con el margen para productos baratos.
+        function calcularPrecios(producto) {
+            const costoArs = producto.precio_costo_usd * exchangeRate;
+            const ventaGeneral = costoArs * (1 + marginPct / 100);
+
+            let margenUsado = marginPct;
+            if (ventaGeneral < thresholdArs) {
+                margenUsado = marginLowPct;
+            }
+
+            const ventaArs = costoArs * (1 + margenUsado / 100);
+            return { costoArs, ventaArs, margenUsado };
+        }
+
+        function renderProducts() {
+            const grid = document.getElementById('productGrid');
+            const countEl = document.getElementById('resultsCount');
+
+            countEl.textContent = filteredProducts.length + ' productos';
+
+            if (filteredProducts.length === 0) {
+                grid.innerHTML = '<div class="no-results"><i class="fas fa-search"></i><p>No se encontraron productos</p></div>';
+                return;
+            }
+
+            let html = '';
+            filteredProducts.forEach(p => {
+                const { costoArs, ventaArs, margenUsado } = calcularPrecios(p);
+                html +=
+                    '<div class="product-card">' +
+                        '<div class="product-marca">' + escapeHtml(p.marca) + '</div>' +
+                        '<div class="product-model">' + escapeHtml(p.modelo) + '</div>' +
+                        (p.calidad ? '<span class="product-calidad">' + escapeHtml(p.calidad) + '</span>' : '') +
+                        '<div class="product-price">' +
+                            '<div class="price-label">Precio de venta</div>' +
+                            '<div class="price-venta">$' + Math.round(ventaArs).toLocaleString('es-AR') + '</div>' +
+                            (showCosto ?
+                                '<div class="price-costo">Costo: $' + Math.round(costoArs).toLocaleString('es-AR') +
+                                ' (USD ' + p.precio_costo_usd.toFixed(2) + ') · margen ' + margenUsado + '%</div>' : '') +
+                        '</div>' +
+                    '</div>';
+            });
+
+            grid.innerHTML = html;
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('open');
+            document.getElementById('overlay').classList.toggle('active');
+        }
+
+        // ============================================================
+        // INICIO
+        // ============================================================
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('marginInput').value = marginPct;
+            document.getElementById('marginLowInput').value = marginLowPct;
+            document.getElementById('thresholdInput').value = thresholdArs;
+            updateMarginSummary();
+            document.getElementById('showCostoToggle').checked = showCosto;
+            if (manualRate) document.getElementById('manualRateInput').value = manualRate;
+
+            fetchExchangeRate();
+            loadProducts();
+            setInterval(fetchExchangeRate, REFRESH_INTERVAL_MS);
+        });
+    </script>
+</body>
+</html>
