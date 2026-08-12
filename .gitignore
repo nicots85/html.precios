@@ -3,3 +3,7 @@ __pycache__/
 *.pyo
 .DS_Store
 ~$*.xlsx
+backend/firebase-credentials.json
+backend/functions/node_modules/
+.firebase/
+firebase-debug.log

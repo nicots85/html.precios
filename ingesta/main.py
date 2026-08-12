@@ -125,8 +125,9 @@ def procesar_archivo(ruta_archivo, config_path='config.json', moneda_forzada=Non
     excel_path = config.get('excel_maestro', 'TechnoStore.xlsx')
     
     if not proveedor:
-        print("\nNo se detectó proveedor. Escribí el nombre (PGVJ, ADRICELL, PINAAPPLE):")
-        proveedor = input("> ").strip().upper()
+        print("\nNo se detectó proveedor automáticamente.")
+        print("Usando proveedor por defecto: PGVJ")
+        proveedor = 'PGVJ'
     
     pestanas = config.get('proveedores', {}).get(proveedor, {}).get('pestanas', [])
     
@@ -145,7 +146,7 @@ def procesar_archivo(ruta_archivo, config_path='config.json', moneda_forzada=Non
             print(f"  Existentes: {len(productos_existentes)}")
             
             # Generar claves para existentes
-           existentes_por_clave = {}
+            existentes_por_clave = {}
             for prod in productos_existentes:
                 clave = generar_clave('', prod.get('marca', ''), prod.get('modelo', ''), prod.get('calidad_o_color', ''))
                 existentes_por_clave[clave] = prod

@@ -35,11 +35,12 @@
   },
   "ai": {
     "provider": "openai",
-    "api_key": "TU_API_KEY_AQUI",
-    "api_base": "https://api.openai.com/v1",
+    "api_key": "sk-d53d6d5bb5b47379-xkoh0v-956c54bf",
+    "api_base": "http://localhost:20128/v1",
     "model": "gpt-4o",
     "max_tokens": 4000,
-    "temperature": 0
+    "temperature": 0,
+    "mock_mode": true
   },
   "ingesta": {
     "carpeta_entrada": "proveedores",

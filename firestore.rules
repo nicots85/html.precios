@@ -1,0 +1,18 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // PRODUCTOS: lectura pública (el endpoint público de Cloud Functions los lee)
+    // Escritura solo desde admin (Cloud Functions con firebase-admin)
+    match /productos/{productoId} {
+      allow read: if true;
+      allow write: if false; // Solo se escribe desde sync_excel_firestore.py con admin SDK
+    }
+    
+    // Configuración: solo lectura desde Cloud Functions
+    match /config/{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -22,7 +22,7 @@ def generar_clave(categoria, marca, modelo, calidad, separador='_'):
     return clave
 
 
-def normalizar_para_clave(texto):
+def normalizar_para_clave(texto, separador='_'):
     """Normaliza un texto para usar en una clave."""
     if not texto:
         return ''
@@ -33,13 +33,13 @@ def normalizar_para_clave(texto):
     texto = unicodedata.normalize('NFKD', texto)
     texto = texto.encode('ASCII', 'ignore').decode('ASCII')
     
-    # Reemplazar caracteres no alfanuméricos por guión
+    # Reemplazar caracteres no alfanuméricos por separador
     texto = re.sub(r'[^a-z0-9]', separador, texto)
     
-    # Colapsar guiones múltiples
-    texto = re.sub(r'_+', '_', texto)
+    # Colapsar separadores múltiples
+    texto = re.sub(f'{re.escape(separador)}+', separador, texto)
     
-    return texto.strip('_')
+    return texto.strip(separador)
 
 
 def calcular_similitud(clave1, clave2):

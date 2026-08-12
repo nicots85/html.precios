@@ -24,6 +24,7 @@ class AIProvider:
         self.model = ai_config.get('model', 'gpt-4o')
         self.max_tokens = ai_config.get('max_tokens', 4000)
         self.temperature = ai_config.get('temperature', 0)
+        self.mock_mode = ai_config.get('mock_mode', False)  # MODO TEST
 
     def interpretar_archivo(self, ruta_archivo, tipo_archivo):
         """
@@ -37,6 +38,10 @@ class AIProvider:
         Returns:
             list[dict]: lista de productos normalizados
         """
+        if self.mock_mode:
+            print("🧪 MODO MOCK: Simulando IA sin llamada real")
+            return self._mock_interpretar(ruta_archivo, tipo_archivo)
+        
         if tipo_archivo == 'excel':
             return self._interpretar_excel(ruta_archivo)
         elif tipo_archivo == 'pdf':
@@ -279,3 +284,174 @@ JSON:"""
         except Exception as e:
             print(f"Error consultando IA visión: {e}")
             return None
+
+    # ========== MODO MOCK (para testing sin IA real) ==========
+
+    def _mock_interpretar(self, ruta_archivo, tipo_archivo):
+        """Interpreta archivo en modo mock - parsea directo sin IA."""
+        import openpyxl
+        
+        if tipo_archivo == 'excel':
+            return self._mock_excel(ruta_archivo)
+        elif tipo_archivo == 'pdf':
+            return self._mock_pdf(ruta_archivo)
+        elif tipo_archivo == 'imagen':
+            return self._mock_imagen(ruta_archivo)
+        elif tipo_archivo == 'texto':
+            return self._mock_texto(ruta_archivo)
+        else:
+            raise ValueError(f"Tipo no soportado: {tipo_archivo}")
+
+    def _mock_excel(self, ruta_archivo):
+        """Parsea Excel directamente detectando columnas."""
+        import openpyxl
+        
+        wb = openpyxl.load_workbook(ruta_archivo, data_only=True)
+        productos = []
+        
+        for hoja in wb.sheetnames:
+            ws = wb[hoja]
+            header_row = self._find_header_row(ws)
+            if not header_row:
+                continue
+            
+            cols = self._find_columns_mock(ws, header_row)
+            if not cols.get('modelo'):
+                continue
+            
+            for row_num in range(header_row + 1, ws.max_row + 1):
+                row_data = [ws.cell(row=row_num, column=c).value for c in range(1, ws.max_column + 1)]
+                producto = self._extraer_producto_mock(row_data, cols, hoja)
+                if producto:
+                    productos.append(producto)
+        
+        return productos
+
+    def _find_header_row(self, ws):
+        for row in range(1, min(15, ws.max_row + 1)):
+            for col in range(1, min(30, ws.max_column + 1)):
+                val = ws.cell(row=row, column=col).value
+                if val and ('MARCA' in str(val).upper() or 'MODELO' in str(val).upper() or 'PRODUCTO' in str(val).upper()):
+                    return row
+        return None
+
+    def _find_columns_mock(self, ws, header_row):
+        cols = {}
+        for col in range(1, ws.max_column + 1):
+            val = str(ws.cell(row=header_row, column=col).value).strip().upper() if ws.cell(row=header_row, column=col).value else ''
+            if 'MARCA' in val:
+                cols['marca'] = col
+            elif 'MODELO' in val or 'DESCRIPCION' in val:
+                cols['modelo'] = col
+            elif 'CALIDAD' in val or 'TIPO' in val or 'COLOR' in val:
+                cols['calidad'] = col
+            elif 'PRECIO PESOS' in val or 'PESOS' in val or ('PRECIO' in val and 'DOLAR' not in val):
+                cols['precio_pesos'] = col
+            elif 'PRECIO DOLAR' in val or 'DOLAR' in val or 'U$S' in val:
+                cols['precio_dolar'] = col
+            elif 'STOCK' in val:
+                cols['stock'] = col
+        return cols
+
+    def _extraer_producto_mock(self, row_data, cols, hoja):
+        def get_val(col_num):
+            if col_num and col_num <= len(row_data):
+                v = row_data[col_num - 1]
+                if v is None:
+                    return ''
+                return str(v).strip()
+            return ''
+        
+        def get_num(col_num):
+            v = get_val(col_num)
+            if not v:
+                return None
+            try:
+                return float(v.replace(',', '.').replace('$', '').replace(' ', ''))
+            except:
+                return None
+        
+        marca = get_val(cols.get('marca'))
+        modelo = get_val(cols.get('modelo'))
+        calidad = get_val(cols.get('calidad'))
+        precio_pesos = get_num(cols.get('precio_pesos'))
+        precio_dolar = get_num(cols.get('precio_dolar'))
+        stock = get_num(cols.get('stock'))
+        
+        if not modelo and not marca:
+            return None
+        
+        if precio_pesos is None and precio_dolar is None:
+            return None
+        
+        moneda = 'ARS' if precio_pesos else 'USD'
+        precio = precio_pesos or precio_dolar
+        
+        return {
+            'marca': marca or '',
+            'modelo': modelo,
+            'calidad_o_color': calidad or '',
+            'precio': precio,
+            'moneda': moneda,
+            'stock': int(stock) if stock else None
+        }
+
+    def _mock_pdf(self, ruta_archivo):
+        try:
+            import fitz
+            doc = fitz.open(ruta_archivo)
+            texto = ""
+            for pagina in doc:
+                texto += pagina.get_text() + "\n"
+            return self._mock_texto_from_string(texto)
+        except:
+            return []
+
+    def _mock_imagen(self, ruta_archivo):
+        return []
+
+    def _mock_texto(self, ruta_archivo):
+        with open(ruta_archivo, 'r', encoding='utf-8') as f:
+            texto = f.read()
+        return self._mock_texto_from_string(texto)
+
+    def _mock_texto_from_string(self, texto):
+        """Parsea texto suelto línea por línea buscando patrones precio."""
+        import re
+        productos = []
+        lineas = texto.split('\n')
+        
+        for linea in lineas:
+            linea = linea.strip()
+            if not linea:
+                continue
+            
+            # Buscar patrón: algo $numero o algo USD numero
+            match = re.search(r'(.+?)\s+[\$\$]?\s*([\d.,]+)\s*(USD|ARS|U\$S)?', linea, re.IGNORECASE)
+            if match:
+                desc = match.group(1).strip()
+                precio_str = match.group(2).replace(',', '.').replace('.', '', match.group(2).count('.')-1)
+                try:
+                    precio = float(precio_str)
+                    moneda = (match.group(3) or 'ARS').upper()
+                    if moneda in ['USD', 'U$S', 'U$S']:
+                        moneda = 'USD'
+                    else:
+                        moneda = 'ARS'
+                    
+                    # Separar marca/modelo de descripción
+                    partes = desc.split()
+                    marca = partes[0] if partes else ''
+                    modelo = ' '.join(partes[1:]) if len(partes) > 1 else ''
+                    
+                    productos.append({
+                        'marca': marca.upper(),
+                        'modelo': modelo.upper(),
+                        'calidad_o_color': '',
+                        'precio': precio,
+                        'moneda': moneda,
+                        'stock': None
+                    })
+                except:
+                    pass
+        return productos

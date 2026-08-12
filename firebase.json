@@ -1,0 +1,39 @@
+{
+  "hosting": {
+    "public": "..",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**",
+      "backend/**",
+      "ingesta/**",
+      "proveedores/**",
+      "*.py",
+      "*.bat",
+      "*.xlsx",
+      "productos.json"
+    ],
+    "rewrites": [
+      {
+        "source": "/api/precios",
+        "function": "precios"
+      },
+      {
+        "source": "/api/precios-admin",
+        "function": "preciosAdmin"
+      }
+    ]
+  },
+  "functions": [
+    {
+      "source": "functions",
+      "codebase": "default",
+      "runtime": "nodejs18",
+      "region": "southamerica-east1"
+    }
+  ],
+  "firestore": {
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  }
+}

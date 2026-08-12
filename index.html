@@ -330,6 +330,25 @@
             margin-top: 0.35rem;
         }
 
+        .stock-badge {
+            display: inline-block;
+            margin-top: 0.5rem;
+            padding: 0.2rem 0.6rem;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .stock-badge.disponible {
+            background-color: rgba(23, 201, 100, 0.15);
+            color: #17c964;
+        }
+
+        .stock-badge.sin_stock {
+            background-color: rgba(239, 68, 68, 0.15);
+            color: #ef4444;
+        }
+
         /* Loading */
         .loading-container {
             display: flex;
@@ -411,10 +430,6 @@
                 <h1>TechnoStore</h1>
             </div>
             <div class="header-right">
-                <label class="toggle-costo" style="color:white;">
-                    <input type="checkbox" id="showCostoToggle" onchange="toggleShowCosto()">
-                    Mostrar costo
-                </label>
                 <div class="relative-wrap">
                     <div class="margin-box" id="marginBox" onclick="toggleMarginPopover()" style="cursor:pointer;">
                         <i class="fas fa-percent"></i>
@@ -503,7 +518,10 @@
         // ============================================================
         // CONFIGURACIÓN
         // ============================================================
-        const JSON_URL = 'productos.json';
+        // Endpoint público (Cloud Function). Devuelve SOLO precio_venta.
+        // Si corrés en local con servidor.bat, usá '/api/precios' que será proxied.
+        // Para deploy en Firebase, la URL es /api/precios automáticamente.
+        const API_URL = '/api/precios';
 
         // Tipo de cambio de emergencia, se usa solo si TODAS las fuentes fallan
         // (por ejemplo, sin internet). Conviene actualizarlo de vez en cuando.
@@ -551,7 +569,8 @@
         let marginPct = loadMargin('ts_margin', 30);
         let marginLowPct = loadMargin('ts_margin_low', 40);
         let thresholdArs = loadMargin('ts_threshold', 20000);
-        let showCosto = loadShowCosto();
+        let showCosto = false; // No se usa, mantenido para compatibilidad
+
 
         // ============================================================
         // COTIZACIÓN USDT/ARS
@@ -672,40 +691,37 @@
         }
 
         // ============================================================
-        // MOSTRAR/OCULTAR COSTO
-        // ============================================================
-        function loadShowCosto() {
-            return localStorage.getItem('ts_show_costo') === '1';
-        }
-
-        function toggleShowCosto() {
-            showCosto = document.getElementById('showCostoToggle').checked;
-            localStorage.setItem('ts_show_costo', showCosto ? '1' : '0');
-            renderProducts();
-        }
-
-        // ============================================================
         // PRODUCTOS
         // ============================================================
         async function loadProducts() {
             try {
-                const response = await fetch(JSON_URL);
-                allProducts = await response.json();
+                const response = await fetch(API_URL);
+                if (!response.ok) throw new Error('HTTP ' + response.status);
+                const data = await response.json();
+                
+                // La API devuelve { tasa_usdt, timestamp, total, productos: [...] }
+                allProducts = data.productos || [];
+                if (data.tasa_usdt && !manualRate) {
+                    exchangeRate = data.tasa_usdt;
+                    rateSourceName = 'servidor';
+                    renderRateDisplay();
+                }
+                
                 filteredProducts = allProducts;
                 renderCategories();
                 renderProducts();
             } catch (error) {
                 console.error('Error loading products:', error);
                 document.getElementById('productGrid').innerHTML =
-                    '<div class="no-results"><i class="fas fa-exclamation-triangle"></i><p>Error al cargar productos.</p></div>';
+                    '<div class="no-results"><i class="fas fa-exclamation-triangle"></i><p>Error al cargar productos. Verificá tu conexión.</p></div>';
             }
         }
 
         function renderCategories() {
             const categories = {};
             allProducts.forEach(p => {
-                if (!categories[p.category]) categories[p.category] = 0;
-                categories[p.category]++;
+                if (!categories[p.categoria]) categories[p.categoria] = 0;
+                categories[p.categoria]++;
             });
 
             const sortedCategories = Object.entries(categories).sort((a, b) => b[1] - a[1]);
@@ -738,7 +754,7 @@
             const searchTerm = document.getElementById('searchInput').value.toLowerCase();
 
             filteredProducts = allProducts.filter(p => {
-                const matchesCategory = currentCategory === 'all' || p.category === currentCategory;
+                const matchesCategory = currentCategory === 'all' || p.categoria === currentCategory;
                 const matchesSearch = !searchTerm ||
                     (p.marca && p.marca.toLowerCase().includes(searchTerm)) ||
                     (p.modelo && p.modelo.toLowerCase().includes(searchTerm)) ||
@@ -749,24 +765,8 @@
             renderProducts();
         }
 
-        // Calcula el costo y precio de venta en pesos, en vivo, a partir del
-        // costo en dólares guardado en productos.json y la cotización actual.
-        // Regla de margen: se calcula primero con el margen general. Si ese
-        // precio queda por debajo del umbral (producto "barato"), se vuelve
-        // a calcular con el margen para productos baratos.
-        function calcularPrecios(producto) {
-            const costoArs = producto.precio_costo_usd * exchangeRate;
-            const ventaGeneral = costoArs * (1 + marginPct / 100);
-
-            let margenUsado = marginPct;
-            if (ventaGeneral < thresholdArs) {
-                margenUsado = marginLowPct;
-            }
-
-            const ventaArs = costoArs * (1 + margenUsado / 100);
-            return { costoArs, ventaArs, margenUsado };
-        }
-
+        // El precio de venta ya viene calculado del servidor.
+        // El cliente NUNCA ve el costo ni el margen.
         function renderProducts() {
             const grid = document.getElementById('productGrid');
             const countEl = document.getElementById('resultsCount');
@@ -780,7 +780,8 @@
 
             let html = '';
             filteredProducts.forEach(p => {
-                const { costoArs, ventaArs, margenUsado } = calcularPrecios(p);
+                const venta = p.precio_venta || 0;
+                const stockLabel = p.stock === 'disponible' ? 'Disponible' : 'Sin stock';
                 html +=
                     '<div class="product-card">' +
                         '<div class="product-marca">' + escapeHtml(p.marca) + '</div>' +
@@ -788,10 +789,8 @@
                         (p.calidad ? '<span class="product-calidad">' + escapeHtml(p.calidad) + '</span>' : '') +
                         '<div class="product-price">' +
                             '<div class="price-label">Precio de venta</div>' +
-                            '<div class="price-venta">$' + Math.round(ventaArs).toLocaleString('es-AR') + '</div>' +
-                            (showCosto ?
-                                '<div class="price-costo">Costo: $' + Math.round(costoArs).toLocaleString('es-AR') +
-                                ' (USD ' + p.precio_costo_usd.toFixed(2) + ') · margen ' + margenUsado + '%</div>' : '') +
+                            '<div class="price-venta">$' + venta.toLocaleString('es-AR') + '</div>' +
+                            '<div class="stock-badge ' + p.stock + '">' + stockLabel + '</div>' +
                         '</div>' +
                     '</div>';
             });
@@ -819,7 +818,6 @@
             document.getElementById('marginLowInput').value = marginLowPct;
             document.getElementById('thresholdInput').value = thresholdArs;
             updateMarginSummary();
-            document.getElementById('showCostoToggle').checked = showCosto;
             if (manualRate) document.getElementById('manualRateInput').value = manualRate;
 
             fetchExchangeRate();
