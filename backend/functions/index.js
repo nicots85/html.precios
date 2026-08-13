@@ -140,7 +140,7 @@ function calcularPrecioVenta(producto, tasaUsdt) {
     return producto.precio_venta || 0;
   }
   
-  const margen = costoPesos < 30000 ? 0.40 : 0.30;
+  const margen = costoPesos < 20000 ? 0.40 : 0.30;
   return Math.round(costoPesos * (1 + margen));
 }
 

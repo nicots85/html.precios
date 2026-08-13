@@ -7,3 +7,8 @@ backend/firebase-credentials.json
 backend/functions/node_modules/
 .firebase/
 firebase-debug.log
+
+# Archivos sensibles (no subir al repo)
+config.json
+TechnoStore.xlsx
+productos.json
