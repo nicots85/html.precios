@@ -1,6 +1,6 @@
 {
   "hosting": {
-    "public": "..",
+    "public": ".",
     "ignore": [
       "firebase.json",
       "**/.*",
@@ -11,7 +11,10 @@
       "*.py",
       "*.bat",
       "*.xlsx",
-      "productos.json"
+      "config.json",
+      "*.md",
+      "firestore.rules",
+      "firestore.indexes.json"
     ],
     "rewrites": [
       {
@@ -26,7 +29,7 @@
   },
   "functions": [
     {
-      "source": "functions",
+      "source": "backend/functions",
       "codebase": "default",
       "runtime": "nodejs18",
       "region": "southamerica-east1"

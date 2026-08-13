@@ -1,21 +1,28 @@
-# Guía de Despliegue - TechnoStore en Firebase
+﻿# Guía de Despliegue - TechnoStore en Firebase
 
-## Arquitectura
+## Arquitectura (hosting estático)
 
 ```
 TechnoStore.xlsx (local)
-        ↓ python backend/sync_excel_firestore.py
-Firestore (base de datos)
+        ↓ python backend/generar_productos.py
+productos.json (catálogo con precios de venta, sin costos)
         ↓
-   ┌────────────────────────┐
-   │  Cloud Functions       │
-   │  /api/precios   → público  │
-   │  /api/precios-admin → privado │
-   └────────────────────────┘
-        ↓                    ↓
-  index.html (público)   Panel admin
-  Firebase Hosting       URL secreta
+   Firebase Hosting  (https://technostore-db.web.app)
+         index.html  →  productos.json
 ```
+
+> El hosting es **estático** (no requiere plan Blaze ni Firestore).
+> Cuando cambian precios en el Excel, regenerás productos.json y re-desplegás.
+
+## Flujo de actualización de precios
+
+1. Modificar `TechnoStore.xlsx` (o aplicar una ingesta de proveedor)
+2. Regenerar el catálogo: `python backend/generar_productos.py`
+3. Re-desplegar: `firebase deploy --only hosting`
+
+La ingesta integra esto: tras aprobar cambios,
+`python -m ingesta.main <archivo> --aplicar`
+actualiza el Excel **y** regenera `productos.json` automáticamente.
 
 ---
 
@@ -37,116 +44,55 @@ Si no tenés Node.js, instalalo desde: https://nodejs.org/
 firebase login
 ```
 
-Te abre el navegador para que autorices. Usá la cuenta de TechnoStore.
+Te abre el navegador para que autorices. Usá la cuenta de TechnoStore (tsbarrionorte@gmail.com).
 
 ---
 
-## Paso 3: Vincular al proyecto existente
+## Paso 3: Vincular al proyecto
 
 ```powershell
-firebase use --add local-81a46
+firebase use technostore-db
 ```
 
-Elegí el alias `default`.
+⚠️ NO tocar el proyecto `local-81a46`.
 
 ---
 
-## Paso 4: Obtener credenciales de Firebase Admin
-
-1. Andá a https://console.firebase.google.com/project/local-81a46/settings/serviceaccounts/adminsdk
-2. Click en **"Generar nueva clave privada"**
-3. Se descarga un JSON. Renombraselo a `firebase-credentials.json`
-4. Copialo a la carpeta `backend/` de tu proyecto
-
-⚠️ **NUNCA** subas este archivo a GitHub.
-
----
-
-## Paso 5: Instalar dependencias del script de sync
+## Paso 4: Regenerar el catálogo
 
 ```powershell
-cd "C:\Users\Usuario\Desktop\listas de precios"
-pip install firebase-admin openpyxl
+python backend/generar_productos.py
 ```
+
+Esto lee `TechnoStore.xlsx` y crea `productos.json` en la raíz. Solo incluye
+productos con precio de venta válido y nunca expone costos ni márgenes.
 
 ---
 
-## Paso 6: Subir datos del Excel a Firestore
-
-```powershell
-python backend/sync_excel_firestore.py
-```
-
-Esto lee `TechnoStore.xlsx` y crea/actualiza los documentos en Firestore. Vas a ver algo como:
-
-```
-Leyendo Excel: TechnoStore.xlsx
-Productos encontrados: 1870
-
-Inicializando Firestore...
-
-[PGVJ] PGVJ - MODULOS GOSTTER (543 productos)
-[PGVJ] PGVJ - MODULOS ORIGINALES (264 productos)
-...
-
-Sincronización completa: 1870 productos en Firestore
-```
-
----
-
-## Paso 7: Configurar la clave secreta del admin
-
-Elegí una clave segura (ej: una contraseña larga). La vamos a guardar como "secreto" en Firebase:
-
-```powershell
-firebase functions:secrets:set ADMIN_SECRET
-```
-
-Te pide el valor, pegá tu clave. Anotala en un lugar seguro — la vas a necesitar para acceder al panel admin.
-
----
-
-## Paso 8: Desplegar Cloud Functions
-
-```powershell
-firebase deploy --only functions
-```
-
-Esto sube las dos funciones (`precios` y `preciosAdmin`) a la región `southamerica-east1`.
-
----
-
-## Paso 9: Desplegar el sitio público
+## Paso 5: Desplegar el sitio público
 
 ```powershell
 firebase deploy --only hosting
 ```
 
 Tu sitio queda disponible en:
-- `https://local-81a46.web.app` (URL principal)
-- `https://local-81a46.firebaseapp.com` (alias)
+- `https://technostore-db.web.app` (URL principal)
+- `https://technostore-db.firebaseapp.com` (alias)
 
 ---
 
-## Paso 10: Probar que todo funciona
+## Paso 6: Probar que todo funciona
 
-### Endpoint público (sin clave)
 Abre en el navegador:
-```
-https://local-81a46.web.app/api/precios
-```
-Deberías ver un JSON con productos (sin costo ni margen).
 
-### Sitio público
-Abre:
 ```
-https://local-81a46.web.app/
+https://technostore-db.web.app/
 ```
 
-### Endpoint privado (con clave)
-Reemplaza `TU_CLAVE_SECRETA` por la que elegiste en el paso 7:
+Deberías ver el catálogo con productos. También podés verificar los datos:
+
 ```
-https://local-81a46.web.app/api/precios-admin?clave=TU_CLAVE_SECRETA
+https://technostore-db.web.app/productos.json
 ```
 
 ---
@@ -158,14 +104,15 @@ https://local-81a46.web.app/api/precios-admin?clave=TU_CLAVE_SECRETA
 Cuando cambia un precio en el Excel:
 
 1. Abrí `TechnoStore.xlsx` y modificá los precios
-2. Ejecutá: `python backend/sync_excel_firestore.py`
-3. La web se actualiza automáticamente (al recargar, consulta Firestore)
+2. Ejecutá: `python backend/generar_productos.py`
+3. Re-desplegá: `firebase deploy --only hosting`
 
 ### Subir lista de proveedor nueva
 
-1. Ejecutá la ingesta: `python -m ingesta.main "ruta\al\archivo.xlsx"`
-2. Aprobá los cambios propuestos en el reporte
-3. Re-ejecutá: `python backend/sync_excel_firestore.py`
+1. Ejecutá la ingesta: `python -m ingesta.main "ruta\al\archivo.pdf"`
+2. Revisá el reporte de cambios
+3. Si querés aplicar: `python -m ingesta.main "ruta\al\archivo.pdf" --aplicar`
+4. Re-desplegá: `firebase deploy --only hosting`
 
 ---
 
@@ -174,10 +121,16 @@ Cuando cambia un precio en el Excel:
 ```
 listas de precios/
 ├── index.html              # Web pública (se sube a Firebase Hosting)
-├── config.json             # Configuración
-├── productos.json          # (Legacy, ya no se usa)
-├── TechnoStore.xlsx        # Excel maestro (NO se sube a Firebase)
-├── servidor.bat            # (Legacy, para correr local)
+├── admin.html              # Panel admin (se sube)
+├── logo.jpg                # Logo
+├── productos.json          # Catálogo generado (se sube, NO se edita a mano)
+├── config.json             # Configuración (NO se sube)
+├── TechnoStore.xlsx        # Excel maestro (NO se sube)
+│
+├── backend/
+│   ├── generar_productos.py        # Genera productos.json desde el Excel
+│   ├── sync_excel_firestore.py     # (Legacy, para Firestore - requiere Blaze)
+│   └── functions/                  # (Legacy, Cloud Functions - requiere Blaze)
 │
 ├── ingesta/                # Sistema de ingesta de proveedores
 │   ├── main.py
@@ -187,46 +140,35 @@ listas de precios/
 │   ├── excel_io.py
 │   └── report.py
 │
-├── backend/                # Backend (NO se sube a Firebase Hosting)
-│   ├── firebase-credentials.json   # ⚠️ NO subir a GitHub
-│   ├── sync_excel_firestore.py     # Script de sincronización
-│   └── functions/                  # Cloud Functions
-│       ├── index.js
-│       └── package.json
-│
 ├── firebase.json           # Config de Firebase
-├── firestore.rules         # Reglas de seguridad
-└── firestore.indexes.json  # Índices de Firestore
+├── firestore.rules         # (Legacy)
+└── firestore.indexes.json  # (Legacy)
 ```
 
 ---
 
-## Costos estimados
+## Costos
 
 - **Firebase Hosting:** gratis hasta 10 GB de transferencia/mes
-- **Cloud Functions:** gratis hasta 2M invocaciones/mes
-- **Firestore:** gratis hasta 1 GB de almacenamiento + 50K lecturas/día
-
-Para una tienda como TechnoStore (unos pocos miles de visitas al mes), **todo queda en el tier gratuito**.
+- La opción estática **no necesita plan Blaze ni tarjeta**
 
 ---
 
 ## Solución de problemas
 
-### "No se encontró el archivo de credenciales"
-Verificá que `backend/firebase-credentials.json` exista.
+### "La web no muestra productos"
+Verificá que `productos.json` se haya generado y esté subido:
 
-### "Permission denied" al subir datos
-Las reglas de Firestore bloquean escritura directa desde el cliente. Eso es correcto — el script usa `firebase-admin` que tiene permisos de servidor.
-
-### La web muestra "Error al cargar productos"
-Verificá que las Cloud Functions estén desplegadas:
 ```powershell
-firebase functions:list
+python backend/generar_productos.py
+firebase deploy --only hosting
 ```
 
+### "Error al cargar productos"
+Probablemente `productos.json` está vacío o mal generado. Revisá el paso 4.
+
 ### El admin no carga
-Verificá que estés pasando la clave correcta en el query string `?clave=...`
+`admin.html` funciona con `productos.json` local; no depende del backend.
 
 ---
 
@@ -234,5 +176,5 @@ Verificá que estés pasando la clave correcta en el query string `?clave=...`
 
 - [ ] Conectar con tu bot de Telegram/WhatsApp (cuando me pases los datos técnicos)
 - [ ] Vigilar carpeta de proveedores automáticamente
-- [ ] Implementar disparador automático de sync (cuando se sube archivo nuevo)
 - [ ] Dashboard de cambios para revisar antes de aplicar
+- [ ] (Opcional) Migrar a Firestore + Cloud Functions si algún día se pasa a plan Blaze

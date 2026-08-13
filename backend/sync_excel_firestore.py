@@ -1,5 +1,5 @@
-"""
-Sincronización Excel maestro → Firestore.
+﻿"""
+SincronizaciÃ³n Excel maestro â†’ Firestore.
 Lee TechnoStore.xlsx y actualiza la base de datos con costo y stock por producto.
 
 Uso:
@@ -22,13 +22,13 @@ def get_firebase_credentials():
     creds_path = os.environ.get('FIREBASE_CREDENTIALS_PATH', 'backend/firebase-credentials.json')
     
     if not os.path.exists(creds_path):
-        print(f"ERROR: No se encontró el archivo de credenciales en: {creds_path}")
+        print(f"ERROR: No se encontrÃ³ el archivo de credenciales en: {creds_path}")
         print()
         print("Para obtenerlo:")
-        print("1. Andá a Firebase Console → Proyecto 'local-81a46'")
-        print("2. Configuración del proyecto → Cuentas de servicio")
+        print("1. AndÃ¡ a Firebase Console â†’ Proyecto 'technostore-db'")
+        print("2. ConfiguraciÃ³n del proyecto â†’ Cuentas de servicio")
         print("3. 'Generar nueva clave privada'")
-        print("4. Guardá el JSON como: backend/firebase-credentials.json")
+        print("4. GuardÃ¡ el JSON como: backend/firebase-credentials.json")
         sys.exit(1)
     
     return creds_path
@@ -40,7 +40,7 @@ def init_firebase():
         import firebase_admin
         from firebase_admin import credentials, firestore
     except ImportError:
-        print("ERROR: Instalá firebase-admin:")
+        print("ERROR: InstalÃ¡ firebase-admin:")
         print("  pip install firebase-admin")
         sys.exit(1)
     
@@ -56,7 +56,7 @@ def init_firebase():
 
 
 def leer_excel(ruta_excel):
-    """Lee el Excel maestro y devuelve productos por proveedor y pestaña."""
+    """Lee el Excel maestro y devuelve productos por proveedor y pestaÃ±a."""
     import openpyxl
     
     wb = openpyxl.load_workbook(ruta_excel, data_only=True)
@@ -114,8 +114,8 @@ def leer_excel(ruta_excel):
             if not marca and not modelo:
                 continue
             
-            # Saltar subtítulos
-            if any(modelo.upper().startswith(m) for m in ['MÓDULO', 'BATERIA', 'COMPONENTE', 'TAPA', 'PLACA', 'ACCESORIO', 'REPUESTO']) and len(modelo) < 40:
+            # Saltar subtÃ­tulos
+            if any(modelo.upper().startswith(m) for m in ['MÃ“DULO', 'BATERIA', 'COMPONENTE', 'TAPA', 'PLACA', 'ACCESORIO', 'REPUESTO']) and len(modelo) < 40:
                 continue
             
             def get_num(col_num):
@@ -155,19 +155,19 @@ def leer_excel(ruta_excel):
 
 
 def detectar_proveedor(pestana):
-    """Detecta el proveedor de una pestaña."""
+    """Detecta el proveedor de una pestaÃ±a."""
     p = pestana.upper()
     if 'ADRICELL' in p:
         return 'ADRICELL'
     elif 'PGVJ' in p:
         return 'PGVJ'
-    elif 'PIÑA' in p or 'PINA' in p:
+    elif 'PIÃ‘A' in p or 'PINA' in p:
         return 'PINAAPPLE'
     return 'OTROS'
 
 
 def detectar_categoria(pestana):
-    """Detecta la categoría del producto."""
+    """Detecta la categorÃ­a del producto."""
     p = pestana.upper()
     if 'MODULO' in p:
         return 'MODULOS'
@@ -191,7 +191,7 @@ def detectar_categoria(pestana):
 
 
 def generar_doc_id(proveedor, marca, modelo, calidad):
-    """Genera un ID de documento único para Firestore."""
+    """Genera un ID de documento Ãºnico para Firestore."""
     def normalize(s):
         if not s:
             return ''
@@ -262,7 +262,7 @@ def sync_a_firestore(excel_path='TechnoStore.xlsx', batch_size=500):
         print(f"  Commit final: {contador} productos")
     
     print()
-    print(f"Sincronización completa: {total_productos} productos en Firestore")
+    print(f"SincronizaciÃ³n completa: {total_productos} productos en Firestore")
     return total_productos
 
 

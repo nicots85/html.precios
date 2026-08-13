@@ -16,34 +16,46 @@ from ingesta.excel_io import ExcelMaestro
 from ingesta.report import ReporteCambios
 
 
-def detectar_proveedor(productos, config):
+def detectar_proveedor(productos, config, texto_archivo=""):
     """
     Detecta de qué proveedor viene una lista de productos.
-    Busca palabras claves en los datos.
-    
+    Busca palabras claves primero en el texto del archivo (header/footer)
+    y después en los productos.
+
+    Args:
+        productos: lista de productos parseados
+        config: configuración con info de proveedores
+        texto_archivo: texto crudo del archivo (PDF/Excel)
+
     Returns:
         str o None: nombre del proveedor detectado
     """
     proveedores_config = config.get('proveedores', {})
-    
-    # Contador de coincidencias por proveedor
     scores = {nombre: 0 for nombre in proveedores_config}
-    
+
+    # 1) Buscar en el texto crudo del archivo (header/footer)
+    if texto_archivo:
+        texto_upper = texto_archivo.upper()
+        for nombre, info in proveedores_config.items():
+            for palabra_clave in info.get('palabras_clave', []):
+                if palabra_clave.upper() in texto_upper:
+                    # Match en header/texto es muy fuerte
+                    scores[nombre] += 50
+
+    # 2) Buscar en los productos (menos peso)
     for producto in productos:
         texto = f"{producto.get('marca', '')} {producto.get('modelo', '')} {producto.get('calidad_o_color', '')}"
         texto = texto.upper()
-        
         for nombre, info in proveedores_config.items():
             for palabra_clave in info.get('palabras_clave', []):
                 if palabra_clave.upper() in texto:
                     scores[nombre] += 1
-    
-    # Devolver el con más coincidencias
+
     if scores:
         mejor = max(scores, key=scores.get)
         if scores[mejor] > 0:
             return mejor
-    
+
     return None
 
 
@@ -97,9 +109,10 @@ def procesar_archivo(ruta_archivo, config_path='config.json', moneda_forzada=Non
         return []
     
     print(f"Productos extraídos: {len(productos_crudos)}")
-    
-    # Detectar proveedor
-    proveedor = detectar_proveedor(productos_crudos, config)
+
+    # Detectar proveedor (usa texto crudo del archivo)
+    texto_archivo = ai.obtener_texto_crudo(ruta_archivo, tipo)
+    proveedor = detectar_proveedor(productos_crudos, config, texto_archivo)
     
     if proveedor:
         print(f"Proveedor detectado: {proveedor}")
@@ -221,23 +234,35 @@ def aplicar_cambios(reportes, config_path='config.json'):
     
     excel_path = config.get('excel_maestro', 'TechnoStore.xlsx')
     
+    config_margenes = config.get('margenes', {})
+    margen_general = config_margenes.get('general', 0.30)
+
     with ExcelMaestro(excel_path, config_path) as excel:
         for reporte in reportes:
             pestana = reporte.pestana
+            ws = excel.wb[pestana] if pestana in excel.wb.sheetnames else None
+            cols = excel._find_columns(ws, excel._find_header_row(ws)) if ws else {}
             
             # Aplicar actualizaciones
             for item in reporte.actualizaciones:
                 prod_viejo = item['producto_viejo']
                 fila = prod_viejo['fila']
+                prod_nuevo = item['producto_nuevo']
                 
                 for campo, (viejo, nuevo) in item['cambios'].items():
                     if campo == 'precio':
-                        # Actualizar columna de precio
-                        # TODO: mapear columna correcta según pestaña
-                        pass
+                        # Actualizar columna de precio correspondiente
+                        moneda_nuevo = prod_nuevo.get('moneda', 'ARS')
+                        if moneda_nuevo == 'USD' and 'precio_dolar' in cols:
+                            excel.actualizar_producto(pestana, fila, cols['precio_dolar'], nuevo)
+                        elif 'precio_pesos' in cols:
+                            excel.actualizar_producto(pestana, fila, cols['precio_pesos'], nuevo)
+                        # Recalcular venta con margen general
+                        if 'venta' in cols:
+                            excel.actualizar_producto(pestana, fila, cols['venta'], round(nuevo * (1 + margen_general)))
                     elif campo == 'stock':
-                        # Actualizar columna de stock
-                        pass
+                        if 'stock' in cols:
+                            excel.actualizar_producto(pestana, fila, cols['stock'], nuevo)
             
             # Agregar productos nuevos
             for prod_nuevo in reporte.productos_nuevos:
@@ -248,6 +273,28 @@ def aplicar_cambios(reportes, config_path='config.json'):
     
     print("Cambios aplicados correctamente.")
     return True
+
+
+def regenerar_productos_json(config_path='config.json'):
+    """
+    Regenera productos.json desde el Excel maestro actualizado.
+    Así la web (hosting estático) refleja los nuevos precios.
+    """
+    try:
+        import subprocess
+        res = subprocess.run(
+            [sys.executable, 'backend/generar_productos.py'],
+            capture_output=True, text=True, encoding='utf-8'
+        )
+        if res.returncode == 0:
+            print("productos.json regenerado correctamente.")
+            return True
+        else:
+            print(f"Error generando productos.json: {res.stderr}")
+            return False
+    except Exception as e:
+        print(f"Error al regenerar productos.json: {e}")
+        return False
 
 
 if __name__ == '__main__':
@@ -274,5 +321,16 @@ if __name__ == '__main__':
         for reporte in reportes:
             print(reporte.generar_texto())
             print()
+
+        # Aplicar cambios si vienen aprobados (flag --aplicar)
+        if '--aplicar' in sys.argv:
+            exito = aplicar_cambios(reportes)
+            if exito:
+                regenerar_productos_json()
+                print("\nSe regeneró productos.json. Re-desplegá el hosting:")
+                print("  firebase deploy --only hosting")
+        else:
+            print("\nPara aplicar los cambios al Excel y regenerar productos.json:")
+            print("  python -m ingesta.main <archivo> --aplicar")
     else:
         print("\nNo se generaron reportes.")

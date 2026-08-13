@@ -46,6 +46,25 @@ Si el archivo está en dólares:
 python -m ingesta.main "C:\Downloads\lista_pinaapple.pdf" USD
 ```
 
+### Aplicar los cambios (actualizar el Excel + productos.json)
+
+Sin el flag solo genera el reporte (no toca nada). Para aplicar:
+
+```bash
+python -m ingesta.main "C:\Downloads\lista_pgvj.xlsx" --aplicar
+```
+
+Esto:
+1. Actualiza precio y stock en `TechnoStore.xlsx`
+2. Agrega los productos nuevos
+3. Regenera `productos.json` (catálogo de la web)
+
+Después re-desplegá el hosting:
+
+```bash
+firebase deploy --only hosting
+```
+
 ### ¿Qué pasa cuando lo corrés?
 
 1. El sistema detecta el tipo de archivo (Excel/PDF/imagen/texto)
@@ -103,6 +122,5 @@ Funciona con cualquier API compatible con OpenAI (OpenAI, Together, Groq, etc.)
 
 - [ ] Conectar con bot de Telegram/WhatsApp
 - [ ] Vigilar carpeta automáticamente
-- [ ] Aplicar cambios con confirmación
 - [ ] Panel web de administración
-- [ ] Sincronización con Firebase/Firestore
+- [ ] (Opcional) Migrar a Firestore + Cloud Functions con plan Blaze

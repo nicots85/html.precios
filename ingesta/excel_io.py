@@ -145,7 +145,40 @@ class ExcelMaestro:
         precio_dolar = get_num(cols.get('precio_dolar'))
         venta = get_num(cols.get('venta'))
         stock = get_num(cols.get('stock'))
-        
+
+        # Si el modelo tiene todo junto (ej: "SAMSUNG J1 ACE OLED2"),
+        # extraer marca y calidad para que matchee con el PDF
+        if modelo and not calidad:
+            marcas = ['SAMSUNG', 'MOTOROLA', 'IPHONE', 'HUAWEI', 'LG', 'SONY',
+                     'NOKIA', 'TCL', 'ALCATEL', 'XIAOMI', 'ZTE', 'HONOR',
+                     'INFINIX', 'REALME', 'OPPO', 'ONEPLUS', 'TECNO', 'NUBIA',
+                     'APPLE', 'BLADE']
+            calidades = ['ORIGINAL', 'OLED', 'OLED2', 'INCELL', 'AMOLED',
+                         'SUPER AMOLED', 'C/MARCO', 'S/M', 'S/MARCO',
+                         'CON MARCO', 'SIN MARCO', 'PREMIUN', 'PREMIUM',
+                         'SVC', 'AMERICANO']
+
+            modelo_upper = modelo.upper()
+            partes = modelo_upper.split()
+
+            # Extraer marca del inicio si está
+            for m in marcas:
+                if modelo_upper.startswith(m + ' ') or modelo_upper == m:
+                    if not marca:
+                        marca = m
+                    # Sacar la marca del modelo
+                    idx = modelo_upper.find(m)
+                    modelo = modelo[idx + len(m):].strip()
+                    modelo_upper = modelo.upper()
+                    break
+
+            # Extraer calidad del final
+            for c in sorted(calidades, key=len, reverse=True):
+                if modelo_upper.endswith(' ' + c) or modelo_upper.endswith(c):
+                    calidad = c
+                    modelo = modelo[:-(len(c))].strip()
+                    break
+
         # Al menos debe tener modelo y algún precio
         if not modelo and not marca:
             return None

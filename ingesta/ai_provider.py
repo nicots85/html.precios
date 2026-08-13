@@ -30,18 +30,18 @@ class AIProvider:
         """
         Interpreta un archivo (xlsx, pdf, imagen, texto) y devuelve
         una lista de productos en estructura común.
-        
+
         Args:
             ruta_archivo: path al archivo
             tipo_archivo: 'excel', 'pdf', 'imagen', 'texto'
-        
+
         Returns:
             list[dict]: lista de productos normalizados
         """
         if self.mock_mode:
             print("🧪 MODO MOCK: Simulando IA sin llamada real")
             return self._mock_interpretar(ruta_archivo, tipo_archivo)
-        
+
         if tipo_archivo == 'excel':
             return self._interpretar_excel(ruta_archivo)
         elif tipo_archivo == 'pdf':
@@ -52,6 +52,39 @@ class AIProvider:
             return self._interpretar_texto(ruta_archivo)
         else:
             raise ValueError(f"Tipo no soportado: {tipo_archivo}")
+
+    def obtener_texto_crudo(self, ruta_archivo, tipo_archivo):
+        """
+        Obtiene el texto crudo del archivo (sin parsear).
+        Útil para detectar proveedor por contenido.
+        """
+        try:
+            if tipo_archivo == 'pdf':
+                import pymupdf
+                doc = pymupdf.open(ruta_archivo)
+                texto = ""
+                for p in doc:
+                    texto += p.get_text() + "\n"
+                doc.close()
+                return texto
+            elif tipo_archivo == 'texto':
+                with open(ruta_archivo, 'r', encoding='utf-8') as f:
+                    return f.read()
+            elif tipo_archivo == 'excel':
+                import openpyxl
+                wb = openpyxl.load_workbook(ruta_archivo, data_only=True)
+                texto = ""
+                for ws in wb.worksheets:
+                    for row in ws.iter_rows(values_only=True):
+                        for cell in row:
+                            if cell is not None:
+                                texto += str(cell) + " "
+                        texto += "\n"
+                return texto
+            return ""
+        except Exception as e:
+            print(f"Error extrayendo texto: {e}")
+            return ""
 
     def _interpretar_excel(self, ruta_archivo):
         """Interpreta un Excel directamente con openpyxl + IA si hace falta."""
@@ -416,17 +449,107 @@ JSON:"""
         return self._mock_texto_from_string(texto)
 
     def _mock_texto_from_string(self, texto):
-        """Parsea texto suelto línea por línea buscando patrones precio."""
+        """Parsea texto. Detecta el patrón de ADRICELL (marca+modelo+calidad+precio)."""
         import re
+        lineas = [l.strip() for l in texto.split('\n') if l.strip()]
         productos = []
-        lineas = texto.split('\n')
-        
+
+        # Detectar si es formato ADRICELL: busca línea "DOLAR XXXX" en el header
+        # y patrón marca repetido cada 5 líneas
+        es_adricell = any('DOLAR' in l.upper() and re.search(r'\d{3,4}', l) for l in lineas[:10])
+
+        if es_adricell:
+            # Encontrar tasa del dólar
+            tasa = 1600
+            for l in lineas[:10]:
+                m = re.search(r'DOLAR\s*(\d{3,4})', l, re.IGNORECASE)
+                if m:
+                    tasa = float(m.group(1))
+                    break
+
+            # Parsear productos en bloques de 5 líneas (marca, modelo, calidad, stock, precio)
+            # o 4 líneas cuando precio y stock están juntos
+            marcas_validas = ['SAMSUNG', 'MOTOROLA', 'IPHONE', 'HUAWEI', 'LG', 'SONY',
+                              'NOKIA', 'TCL', 'ALCATEL', 'XIAOMI', 'ZTE', 'HONOR',
+                              'INFINIX', 'REALME', 'OPPO', 'ONEPLUS', 'TECNO', 'NUBIA', 'APPLE']
+
+            i = 0
+            while i < len(lineas):
+                linea = lineas[i].upper().strip()
+
+                # Detectar marca
+                marca = None
+                if linea in [m for m in marcas_validas]:
+                    marca = linea
+                elif linea in ['MODULO SAMSUNG', 'MODULO MOTOROLA', 'MODULO IPHONE']:
+                    # Subtítulos de categoría - saltar
+                    i += 1
+                    continue
+
+                if marca and i + 3 < len(lineas):
+                    modelo = lineas[i + 1]
+                    calidad = lineas[i + 2]
+                    precio_pesos = None
+                    stock = None
+
+                    # Línea 4: puede ser stock o stock+precio juntos
+                    linea4 = lineas[i + 3]
+                    m_precio = re.search(r'\$?\s*([\d.,]+)', linea4)
+
+                    if i + 4 < len(lineas):
+                        linea5 = lineas[i + 4]
+                        m_precio2 = re.search(r'\$\s*([\d.,]+)', linea5)
+
+                        # Caso: stock solo en línea 4, precio en línea 5
+                        if m_precio and not linea4.startswith('$') and '$' not in linea4:
+                            try:
+                                stock = int(float(linea4.replace(',', '.')))
+                            except:
+                                stock = None
+                            if m_precio2:
+                                precio_str = m_precio2.group(1).replace('.', '').replace(',', '.')
+                                try:
+                                    precio_pesos = float(precio_str)
+                                except:
+                                    precio_pesos = None
+                            i += 5
+                        # Caso: stock+precio en línea 4
+                        elif m_precio and '$' in linea4:
+                            partes = linea4.split('$')
+                            try:
+                                stock = int(float(partes[0].strip().replace(',', '.')))
+                            except:
+                                stock = None
+                            precio_str = partes[1].strip().replace('.', '').replace(',', '.')
+                            try:
+                                precio_pesos = float(precio_str)
+                            except:
+                                precio_pesos = None
+                            i += 4
+                        else:
+                            i += 1
+                            continue
+                    else:
+                        i += 1
+                        continue
+
+                    if precio_pesos and precio_pesos > 0:
+                        precio_usd = round(precio_pesos / tasa, 2)
+                        productos.append({
+                            'marca': marca,
+                            'modelo': modelo,
+                            'calidad_o_color': calidad,
+                            'precio': precio_pesos,
+                            'moneda': 'ARS',
+                            'stock': stock
+                        })
+                        continue
+
+                i += 1
+            return productos
+
+        # Fallback: parser genérico
         for linea in lineas:
-            linea = linea.strip()
-            if not linea:
-                continue
-            
-            # Buscar patrón: algo $numero o algo USD numero
             match = re.search(r'(.+?)\s+[\$\$]?\s*([\d.,]+)\s*(USD|ARS|U\$S)?', linea, re.IGNORECASE)
             if match:
                 desc = match.group(1).strip()
@@ -438,12 +561,11 @@ JSON:"""
                         moneda = 'USD'
                     else:
                         moneda = 'ARS'
-                    
-                    # Separar marca/modelo de descripción
+
                     partes = desc.split()
                     marca = partes[0] if partes else ''
                     modelo = ' '.join(partes[1:]) if len(partes) > 1 else ''
-                    
+
                     productos.append({
                         'marca': marca.upper(),
                         'modelo': modelo.upper(),

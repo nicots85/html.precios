@@ -103,18 +103,26 @@ def normalizar_producto(producto_crudado, proveedor=None):
     
     # Si la marca está vacía pero el modelo tiene marca conocida, separar
     marcas_conocidas = [
-        'SAMSUNG', 'IPHONE', 'MOTOROLA', 'HUAWEI', 'LG', 'SONY', 
+        'SAMSUNG', 'IPHONE', 'MOTOROLA', 'HUAWEI', 'LG', 'SONY',
         'NOKIA', 'TCL', 'ALCATEL', 'XIAOMI', 'ZTE', 'JBL', 'GOSTTER',
         'APPLE', 'INFINIX', 'REALME', 'OPPO', 'ONEPLUS', 'HONOR', 'NOTHING',
         'GOOGLE', 'ASUS', 'LENOVO', 'HP', 'DELL'
     ]
-    
+
     if not marca and modelo:
         for m in marcas_conocidas:
             if modelo.startswith(m):
                 marca = m
                 modelo = modelo[len(m):].strip()
                 break
+
+    # Limpiar prefijos de tipo del modelo (ej: "MODULO J1 ACE" → "J1 ACE")
+    prefijos_tipo = ['MODULO ', 'BATERIA ', 'TAPA ', 'PLACA ', 'CARGADOR ',
+                     'FLEX ', 'CABLE ', 'ADAPTADOR ', 'AURICULAR ', 'VIDRIO ']
+    for p in prefijos_tipo:
+        if modelo.upper().startswith(p):
+            modelo = modelo[len(p):].strip()
+            break
     
     # Construir producto normalizado
     return {
