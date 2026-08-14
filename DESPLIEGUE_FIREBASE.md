@@ -7,7 +7,7 @@ TechnoStore.xlsx (local)
         ↓ python backend/generar_productos.py
 productos.json (catálogo con precios de venta, sin costos)
         ↓
-   Firebase Hosting  (https://technostore-db.web.app)
+   Firebase Hosting  (https://technostore-arg.web.app)
          index.html  →  productos.json
 ```
 
@@ -51,7 +51,7 @@ Te abre el navegador para que autorices. Usá la cuenta de TechnoStore (tsbarrio
 ## Paso 3: Vincular al proyecto
 
 ```powershell
-firebase use technostore-db
+firebase use technostore-arg
 ```
 
 ⚠️ NO tocar el proyecto `local-81a46`.
@@ -76,8 +76,8 @@ firebase deploy --only hosting
 ```
 
 Tu sitio queda disponible en:
-- `https://technostore-db.web.app` (URL principal)
-- `https://technostore-db.firebaseapp.com` (alias)
+- `https://technostore-arg.web.app` (URL principal)
+- `https://technostore-arg.firebaseapp.com` (alias)
 
 ---
 
@@ -86,13 +86,13 @@ Tu sitio queda disponible en:
 Abre en el navegador:
 
 ```
-https://technostore-db.web.app/
+https://technostore-arg.web.app/
 ```
 
 Deberías ver el catálogo con productos. También podés verificar los datos:
 
 ```
-https://technostore-db.web.app/productos.json
+https://technostore-arg.web.app/productos.json
 ```
 
 ---

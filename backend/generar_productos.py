@@ -92,18 +92,29 @@ def leer_excel(ruta_excel):
 
             stock = get_num(cols.get('stock')) if cols.get('stock') else None
 
+            # Stock binario para la web (la web espera 'disponible'/'sin_stock')
+            if stock is None:
+                stock_binario = None
+            elif stock > 0:
+                stock_binario = 'disponible'
+            else:
+                stock_binario = 'sin_stock'
+
             key = generar_clave(categoria, marca, modelo, calidad)
 
-            productos.append({
+            producto = {
                 'source': proveedor,
                 'category': categoria,
                 'marca': marca,
                 'modelo': modelo,
                 'calidad': calidad,
                 'precio_venta': int(precio_venta),
-                'stock': int(stock) if stock else None,
                 'key': key
-            })
+            }
+            if stock_binario is not None:
+                producto['stock'] = stock_binario
+
+            productos.append(producto)
 
     return productos
 

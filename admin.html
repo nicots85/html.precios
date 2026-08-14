@@ -561,11 +561,15 @@
 
     <script>
         const ADMIN_KEY = localStorage.getItem('ts_admin_key') || '';
+        const ADMIN_PASSWORD = '166258745';
         let orders = [];
 
         function doLogin() {
             const key = document.getElementById('adminKey').value.trim();
-            if (!key) return;
+            if (key !== ADMIN_PASSWORD) {
+                document.getElementById('loginError').textContent = 'Clave incorrecta.';
+                return;
+            }
             localStorage.setItem('ts_admin_key', key);
             showAdmin();
         }
@@ -722,7 +726,7 @@
             }, 2500);
         }
 
-        if (ADMIN_KEY) {
+        if (ADMIN_KEY === ADMIN_PASSWORD) {
             showAdmin();
         } else {
             document.getElementById('loginScreen').style.display = 'block';

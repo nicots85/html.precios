@@ -56,10 +56,10 @@ LeÃ© TODO este documento antes de escribir/ejecutar nada.
 ## 3. DECISIONES DE ARQUITECTURA YA TOMADAS (NO CAMBIAR SIN EXPLICAR ANTES)
 
 1. **Excel = fuente de verdad.** Todo cambio de costo/stock se hace SOLO en el Excel maestro.
-2. **Base de datos privada:** Firestore en el proyecto Firebase existente `technostore-db`
+2. **Base de datos privada:** Firestore en el proyecto Firebase existente `technostore-arg`
    (regiÃ³n `southamerica-east1`). AllÃ­ tambiÃ©n corre el backend de ecommerce y la
    integraciÃ³n con AFIP del negocio.
-3. **Backend:** Firebase Cloud Functions (mismo proyecto `technostore-db`). NO servidor propio.
+3. **Backend:** Firebase Cloud Functions (mismo proyecto `technostore-arg`). NO servidor propio.
    - Ruta pÃºblica `GET /precios`: sin auth. Devuelve SOLO categoria, marca, modelo,
      calidad, stock (binario disponible/sin stock), precio_venta. **NUNCA costo ni margen**.
    - Ruta privada `GET /precios-admin`: protegida por URL secreta (sin login complejo).
@@ -161,7 +161,7 @@ PASO 9: Se dispara la sincronizaciÃ³n Excel â†’ Firestore â†’ web p�
 3. Cualquier cambio automÃ¡tico al Excel debe quedar registrado y revisable por el dueÃ±o
    antes o despuÃ©s de aplicarse. No hay cambios silenciosos.
 4. Explicar cada paso que el dueÃ±o deba ejecutar en lenguaje simple (no sabe programar).
-5. Preferir reusar lo existente (Firebase `technostore-db`) antes que sumar servicios nuevos.
+5. Preferir reusar lo existente (Firebase `technostore-arg`) antes que sumar servicios nuevos.
    Si algo nuevo es claramente mejor, explicar el trade-off.
 
 ## 10. ESTADO ACTUAL / QUÃ‰ FALTA
@@ -192,7 +192,7 @@ PASO 9: Se dispara la sincronizaciÃ³n Excel â†’ Firestore â†’ web p�
 - Python 3 + openpyxl + PyMuPDF (sistema de ingesta, local).
 - JSON estÃ¡tico (web actual, `productos.json`).
 - Cualquier API de IA compatible con OpenAI (configurable en `config.json`).
-- Firebase `technostore-db`, regiÃ³n `southamerica-east1` (Cloud Functions + Firestore +
+- Firebase `technostore-arg`, regiÃ³n `southamerica-east1` (Cloud Functions + Firestore +
   Hosting) para la etapa de publicaciÃ³n.
 
 ## 12. PENDIENTES DE RESPUESTA DEL DUEÃ‘O (preguntar antes de avanzar en esos temas)

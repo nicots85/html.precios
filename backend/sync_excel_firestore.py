@@ -25,7 +25,7 @@ def get_firebase_credentials():
         print(f"ERROR: No se encontrÃ³ el archivo de credenciales en: {creds_path}")
         print()
         print("Para obtenerlo:")
-        print("1. AndÃ¡ a Firebase Console â†’ Proyecto 'technostore-db'")
+        print("1. AndÃ¡ a Firebase Console â†’ Proyecto 'technostore-arg'")
         print("2. ConfiguraciÃ³n del proyecto â†’ Cuentas de servicio")
         print("3. 'Generar nueva clave privada'")
         print("4. GuardÃ¡ el JSON como: backend/firebase-credentials.json")

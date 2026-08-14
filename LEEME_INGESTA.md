@@ -1,6 +1,6 @@
-# TechnoStore - Sistema de Ingesta de Listas de Proveedores
+﻿# TechnoStore - Sistema de Ingesta de Listas de Proveedores
 
-## ¿Qué es esto?
+## Â¿QuÃ© es esto?
 
 Un sistema que toma un archivo crudo de un proveedor (Excel, PDF, foto o texto),
 lo interpreta con IA, lo compara contra tu `TechnoStore.xlsx`, y te muestra
@@ -10,24 +10,24 @@ un reporte de cambios propuestos antes de tocar nada.
 
 ```
 ingesta/
-├── __init__.py
-├── main.py           # Punto de entrada: procesá un archivo
-├── ai_provider.py    # Interfaz IA (cambiás el proveedor en config.json)
-├── normalizer.py     # Normaliza datos a estructura común
-├── matcher.py        # Genera claves y compara productos
-├── excel_io.py       # Lee y escribe el Excel maestro
-└── report.py         # Genera reportes de cambios
-config.json           # Configuración centralizada
+â”œâ”€â”€ __init__.py
+â”œâ”€â”€ main.py           # Punto de entrada: procesÃ¡ un archivo
+â”œâ”€â”€ ai_provider.py    # Interfaz IA (cambiÃ¡s el proveedor en config.json)
+â”œâ”€â”€ normalizer.py     # Normaliza datos a estructura comÃºn
+â”œâ”€â”€ matcher.py        # Genera claves y compara productos
+â”œâ”€â”€ excel_io.py       # Lee y escribe el Excel maestro
+â””â”€â”€ report.py         # Genera reportes de cambios
+config.json           # ConfiguraciÃ³n centralizada
 ```
 
-## Configuración inicial
+## ConfiguraciÃ³n inicial
 
-1. **Editá `config.json`** con tus datos:
+1. **EditÃ¡ `config.json`** con tus datos:
    - Clave de API de IA (`ai.api_key`)
-   - Proveedores y pestañas
-   - Márgenes
+   - Proveedores y pestaÃ±as
+   - MÃ¡rgenes
 
-2. **Instalá dependencias** (si no las tenés):
+2. **InstalÃ¡ dependencias** (si no las tenÃ©s):
    ```
    pip install openpyxl pymupdf
    ```
@@ -40,7 +40,7 @@ config.json           # Configuración centralizada
 python -m ingesta.main "C:\Downloads\lista_pgvj.xlsx"
 ```
 
-Si el archivo está en dólares:
+Si el archivo estÃ¡ en dÃ³lares:
 
 ```bash
 python -m ingesta.main "C:\Downloads\lista_pinaapple.pdf" USD
@@ -57,15 +57,15 @@ python -m ingesta.main "C:\Downloads\lista_pgvj.xlsx" --aplicar
 Esto:
 1. Actualiza precio y stock en `TechnoStore.xlsx`
 2. Agrega los productos nuevos
-3. Regenera `productos.json` (catálogo de la web)
+3. Regenera `productos.json` (catÃ¡logo de la web)
 
-Después re-desplegá el hosting:
+DespuÃ©s re-desplegÃ¡ el hosting:
 
 ```bash
 firebase deploy --only hosting
 ```
 
-### ¿Qué pasa cuando lo corrés?
+### Â¿QuÃ© pasa cuando lo corrÃ©s?
 
 1. El sistema detecta el tipo de archivo (Excel/PDF/imagen/texto)
 2. La IA interpreta los productos
@@ -82,30 +82,30 @@ firebase deploy --only hosting
 ========================================
 REPORTE DE CAMBIOS
 Proveedor: PGVJ
-Pestaña: PGVJ - MODULOS GOSTTER
+PestaÃ±a: PGVJ - MODULOS GOSTTER
 ========================================
 
 ACTUALIZACIONES (2):
 ------------------------------
   SAMSUNG A13 (CON LENTE NEGRO)
-    Precio: $9,520 → $10,000 (+5.0%)
+    Precio: $9,520 â†’ $10,000 (+5.0%)
 
   MOTOROLA EDGE 50 FUSION (ORIGINAL)
-    Precio: $45,000 → $42,000 (-6.7%)
+    Precio: $45,000 â†’ $42,000 (-6.7%)
 
 PRODUCTOS NUEVOS (1):
 ------------------------------
   SAMSUNG S25 ULTRA (CON LENTE AZUL)
     Precio: $85,000 ARS
 
-──────────────────────────────
-¿Aplicar cambios?
-Respondé 'si' para aplicar, 'no' para cancelar.
+â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+Â¿Aplicar cambios?
+RespondÃ© 'si' para aplicar, 'no' para cancelar.
 ```
 
 ## Cambiar el proveedor de IA
 
-En `config.json`, cambiá:
+En `config.json`, cambiÃ¡:
 
 ```json
 "ai": {
@@ -118,9 +118,9 @@ En `config.json`, cambiá:
 
 Funciona con cualquier API compatible con OpenAI (OpenAI, Together, Groq, etc.)
 
-## Próximos pasos (futuro)
+## PrÃ³ximos pasos (futuro)
 
 - [ ] Conectar con bot de Telegram/WhatsApp
-- [ ] Vigilar carpeta automáticamente
-- [ ] Panel web de administración
+- [ ] Vigilar carpeta automÃ¡ticamente
+- [ ] Panel web de administraciÃ³n
 - [ ] (Opcional) Migrar a Firestore + Cloud Functions con plan Blaze
