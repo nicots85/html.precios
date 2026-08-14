@@ -152,6 +152,13 @@
 
         .card-header-row h3 { margin-bottom: 0; }
 
+        .card-header-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
         .segmented {
             display: inline-flex;
             background: var(--gray-100);
@@ -545,9 +552,12 @@
                 <div class="card">
                     <div class="card-header-row">
                         <h3><i class="fas fa-list"></i> Pedidos</h3>
-                        <div class="segmented">
-                            <button class="seg active" id="segPendientes" onclick="setOrderFilter('pendientes')">Pendientes</button>
-                            <button class="seg" id="segHistorial" onclick="setOrderFilter('historial')">Historial</button>
+                        <div class="card-header-actions">
+                            <button class="btn btn-secondary btn-small" onclick="exportOrders()"><i class="fas fa-paper-plane"></i> Exportar para Telegram</button>
+                            <div class="segmented">
+                                <button class="seg active" id="segPendientes" onclick="setOrderFilter('pendientes')">Pendientes</button>
+                                <button class="seg" id="segHistorial" onclick="setOrderFilter('historial')">Historial</button>
+                            </div>
                         </div>
                     </div>
                     <div id="ordersList"></div>
@@ -790,6 +800,21 @@
                 localStorage.setItem('ts_orders', JSON.stringify(orders));
                 loadOrders();
             }
+        }
+
+        function exportOrders() {
+            const pendientes = orders.filter(o => o.estado !== 'atendido');
+            if (!pendientes.length) {
+                showToast('No hay pedidos pendientes para exportar');
+                return;
+            }
+            const blob = new Blob([JSON.stringify(pendientes, null, 2)], { type: 'application/json' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'pedidos_export.json';
+            a.click();
+            URL.revokeObjectURL(a.href);
+            showToast(pendientes.length + ' pedido(s) exportados — copialo en backend/ y corré python backend/telegram.py');
         }
 
         function esc(t) {
