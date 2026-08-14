@@ -1150,10 +1150,6 @@
             </a>
 
             <div class="header-actions">
-                <button class="filter-btn" onclick="toggleSidebar()">
-                    <i class="fas fa-sliders"></i> Filtros
-                    <span class="badge" id="filterBadge">0</span>
-                </button>
                 <button class="cart-btn primary" onclick="toggleCart()">
                     <i class="fas fa-cart-shopping"></i>
                     <span class="cart-count" id="cartCount">0</span>
@@ -1202,6 +1198,10 @@
             <div class="form-group">
                 <label>Teléfono *</label>
                 <input type="tel" id="custPhone" placeholder="Tu teléfono">
+            </div>
+            <div class="form-group">
+                <label>Dirección (opcional)</label>
+                <input type="text" id="custAddress" placeholder="Dirección para el envío">
             </div>
             <div class="form-group">
                 <label>Notas (opcional)</label>
@@ -1486,9 +1486,6 @@
                 chips.push({ label: 'Solo disponibles', type: 'available', value: true });
             }
 
-            document.getElementById('filterBadge').textContent = chips.length;
-            document.getElementById('filterBadge').style.display = chips.length ? 'flex' : 'none';
-
             let html = '';
             chips.forEach(c => {
                 html += '<span class="filter-chip">' + esc(c.label) + ' <button onclick="removeChip(\'' + c.type + '\',\'' + String(c.value).replace(/'/g, "\\'") + '\')">&times;</button></span>';
@@ -1675,6 +1672,7 @@
         function submitOrder() {
             const name = document.getElementById('custName').value.trim();
             const phone = document.getElementById('custPhone').value.trim();
+            const address = document.getElementById('custAddress').value.trim();
             const notes = document.getElementById('custNotes').value.trim();
 
             if (!name || !phone) {
@@ -1685,7 +1683,7 @@
             const order = {
                 id: 'PED-' + Date.now(),
                 fecha: new Date().toISOString(),
-                cliente: { nombre: name, telefono: phone, notas: notes },
+                cliente: { nombre: name, telefono: phone, direccion: address, notas: notes },
                 items: cart.map(i => ({ ...i })),
                 total: cartTotal()
             };
@@ -1697,6 +1695,7 @@
             let msg = '🛒 *NUEVO PEDIDO*\n\n';
             msg += 'Cliente: ' + name + '\n';
             msg += 'Tel: ' + phone + '\n';
+            if (address) msg += 'Dirección: ' + address + '\n';
             if (notes) msg += 'Notas: ' + notes + '\n';
             msg += '\nItems:\n';
             cart.forEach(i => {
